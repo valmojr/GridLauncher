@@ -1,6 +1,7 @@
 package com.valmo.gridlauncher.launcher
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -62,7 +63,7 @@ class LauncherScreenTest {
     }
 
     @Test
-    fun editorShowsInstalledAppsAndLongPressActions() {
+    fun editorShowsInstalledAppsAndCenteredLongPressActions() {
         val maps = AppShortcut("com.example.maps", "Mapas")
         val camera = AppShortcut("com.example.camera", "Câmera")
 
@@ -95,6 +96,8 @@ class LauncherScreenTest {
             longClick()
         }
 
+        composeRule.onNodeWithTag("app-actions-dialog").assertIsDisplayed()
+        composeRule.onNodeWithTag("app-actions-title").assertTextEquals("Câmera")
         composeRule.onNodeWithText("Abrir").assertIsDisplayed()
         composeRule.onNodeWithText("Adicionar aos atalhos").assertIsDisplayed()
         composeRule.onNodeWithText("Informações do App").assertIsDisplayed()

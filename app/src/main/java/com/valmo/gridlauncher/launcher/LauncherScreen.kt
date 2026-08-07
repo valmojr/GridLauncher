@@ -23,20 +23,17 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -60,6 +57,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.valmo.gridlauncher.R
 import com.valmo.gridlauncher.model.AppShortcut
 import com.valmo.gridlauncher.ui.theme.GridLauncherTheme
@@ -250,7 +248,7 @@ private fun AppSelectionScreen(
             .fillMaxSize()
             .background(Color.Black),
     ) {
-        val isWide = maxWidth >= LANDSCAPE_EDITOR_MIN_WIDTH
+        val useSideBySide = maxWidth > maxHeight && maxWidth >= LANDSCAPE_EDITOR_MIN_WIDTH
 
         Column(
             modifier = Modifier
@@ -266,7 +264,7 @@ private fun AppSelectionScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (isWide) {
+            if (useSideBySide) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier
@@ -328,32 +326,69 @@ private fun EditorHeader(
     onSave: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = stringResource(R.string.choose_apps),
-                color = Color.White,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                text = stringResource(R.string.selected_app_count, selectedCount),
-                color = Color.LightGray,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val compact = maxWidth < COMPACT_HEADER_MAX_WIDTH
+
+        if (compact) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                EditorTitle(selectedCount = selectedCount)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    TextButton(onClick = onCancel) {
+                        Text(text = stringResource(R.string.cancel))
+                    }
+                    Button(
+                        enabled = canSave,
+                        onClick = onSave,
+                    ) {
+                        Text(text = stringResource(R.string.save))
+                    }
+                }
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                EditorTitle(
+                    selectedCount = selectedCount,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = onCancel) {
+                    Text(text = stringResource(R.string.cancel))
+                }
+                Button(
+                    enabled = canSave,
+                    onClick = onSave,
+                ) {
+                    Text(text = stringResource(R.string.save))
+                }
+            }
         }
-        TextButton(onClick = onCancel) {
-            Text(text = stringResource(R.string.cancel))
-        }
-        Button(
-            enabled = canSave,
-            onClick = onSave,
-        ) {
-            Text(text = stringResource(R.string.save))
-        }
+    }
+}
+
+@Composable
+private fun EditorTitle(
+    selectedCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = stringResource(R.string.choose_apps),
+            color = Color.White,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = stringResource(R.string.selected_app_count, selectedCount),
+            color = Color.LightGray,
+            style = MaterialTheme.typography.bodyMedium,
+        )
     }
 }
 
@@ -425,7 +460,7 @@ private fun InstalledAppsPanel(
     onUninstall: (AppShortcut) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var menuPackage by remember { mutableStateOf<String?>(null) }
+    var menuApp by remember { mutableStateOf<AppShortcut?>(null) }
 
     Column(
         modifier = modifier
@@ -463,95 +498,151 @@ private fun InstalledAppsPanel(
             return@Column
         }
 
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 170.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
-            gridItems(
+            items(
                 items = apps,
                 key = { it.packageName },
             ) { app ->
                 val selected = app.packageName in selectedPackages
-                Box {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .testTag("installed-app:${app.packageName}")
-                            .background(
-                                color = Color(0xFF1A1A1A),
-                                shape = RoundedCornerShape(12.dp),
-                            )
-                            .combinedClickable(
-                                onClick = { onToggleApp(app.packageName) },
-                                onLongClick = { menuPackage = app.packageName },
-                            )
-                            .padding(10.dp),
-                    ) {
-                        AppIcon(
-                            shortcut = app,
-                            modifier = Modifier.size(42.dp),
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("installed-app:${app.packageName}")
+                        .background(
+                            color = Color(0xFF1A1A1A),
+                            shape = RoundedCornerShape(12.dp),
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = app.label,
-                            color = Color.White,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f),
+                        .combinedClickable(
+                            onClick = { onToggleApp(app.packageName) },
+                            onLongClick = { menuApp = app },
                         )
-                        Checkbox(
-                            checked = selected,
-                            onCheckedChange = { onToggleApp(app.packageName) },
-                        )
-                    }
-
-                    DropdownMenu(
-                        expanded = menuPackage == app.packageName,
-                        onDismissRequest = { menuPackage = null },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.open_app)) },
-                            onClick = {
-                                menuPackage = null
-                                onOpenApp(app)
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    stringResource(
-                                        if (selected) R.string.remove_shortcut
-                                        else R.string.add_shortcut,
-                                    ),
-                                )
-                            },
-                            onClick = {
-                                menuPackage = null
-                                onToggleApp(app.packageName)
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.app_info)) },
-                            onClick = {
-                                menuPackage = null
-                                onAppInfo(app)
-                            },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.uninstall_app)) },
-                            onClick = {
-                                menuPackage = null
-                                onUninstall(app)
-                            },
-                        )
-                    }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                ) {
+                    AppIcon(
+                        shortcut = app,
+                        modifier = Modifier.size(42.dp),
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = app.label,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Checkbox(
+                        checked = selected,
+                        onCheckedChange = { onToggleApp(app.packageName) },
+                    )
                 }
             }
         }
+    }
+
+    menuApp?.let { app ->
+        AppActionsDialog(
+            app = app,
+            isSelected = app.packageName in selectedPackages,
+            onDismiss = { menuApp = null },
+            onOpenApp = {
+                menuApp = null
+                onOpenApp(app)
+            },
+            onToggleApp = {
+                menuApp = null
+                onToggleApp(app.packageName)
+            },
+            onAppInfo = {
+                menuApp = null
+                onAppInfo(app)
+            },
+            onUninstall = {
+                menuApp = null
+                onUninstall(app)
+            },
+        )
+    }
+}
+
+@Composable
+private fun AppActionsDialog(
+    app: AppShortcut,
+    isSelected: Boolean,
+    onDismiss: () -> Unit,
+    onOpenApp: () -> Unit,
+    onToggleApp: () -> Unit,
+    onAppInfo: () -> Unit,
+    onUninstall: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            color = Color(0xFF181818),
+            shape = RoundedCornerShape(20.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(min = 300.dp, max = 440.dp)
+                .testTag("app-actions-dialog"),
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = app.label,
+                    color = Color.White,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.testTag("app-actions-title"),
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = ShortcutDivider)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AppActionButton(
+                    label = stringResource(R.string.open_app),
+                    onClick = onOpenApp,
+                )
+                AppActionButton(
+                    label = stringResource(
+                        if (isSelected) R.string.remove_shortcut
+                        else R.string.add_shortcut,
+                    ),
+                    onClick = onToggleApp,
+                )
+                AppActionButton(
+                    label = stringResource(R.string.app_info),
+                    onClick = onAppInfo,
+                )
+                AppActionButton(
+                    label = stringResource(R.string.uninstall_app),
+                    onClick = onUninstall,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppActionButton(
+    label: String,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            textAlign = TextAlign.Start,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -710,6 +801,7 @@ private fun LauncherScreenPreview() {
 }
 
 private val LANDSCAPE_EDITOR_MIN_WIDTH = 720.dp
+private val COMPACT_HEADER_MAX_WIDTH = 520.dp
 private const val MAX_VISIBLE_TILES = 6
 private const val DEFAULT_ICON_PIXELS = 96
 private const val MAX_ICON_PIXELS = 192

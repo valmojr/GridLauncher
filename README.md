@@ -1,6 +1,6 @@
 # GridLauncher
 
-GridLauncher is a native, minimalist Android home-screen launcher optimized for landscape devices. It provides a focused full-screen shortcut grid, lets users customize which installed apps are shown, and persists that configuration on the device.
+GridLauncher is a native, minimalist Android home-screen launcher that supports both portrait and landscape orientations. It provides a focused full-screen shortcut grid, lets users customize which installed apps are shown, and persists that configuration on the device.
 
 The Android namespace and application ID are both `com.valmo.gridlauncher`.
 
@@ -47,12 +47,13 @@ Refreshes are cancelled before a new one begins. Existing shortcuts stay visible
 
 Long-press a launcher shortcut, or tap **Edit**, to open the shortcut customizer.
 
-On landscape devices the editor uses a split layout:
+The editor adapts to device orientation:
 
-- **Shortcuts** on the left shows the currently selected shortcut order.
-- **Installed apps** on the right keeps the installed-app grid visible at the same time.
+- In landscape, **Shortcuts** and **Installed apps** are shown side by side when enough width is available.
+- In portrait, the panels are stacked vertically so both the shortcut order and installed-app list remain accessible.
+- **Installed apps** always uses a standard single-column list with one app per row.
 
-Tap an installed app to add or remove it from the shortcut selection. Long-press an installed app to open a context menu with:
+Tap an installed app to add or remove it from the shortcut selection. Long-press an installed app to open a large centered action dialog titled with the app name. The dialog provides:
 
 - Open
 - Add to / remove from shortcuts
@@ -120,7 +121,7 @@ Then choose **GridLauncher** as the default Home app.
 
 Unit tests cover default shortcut integrity, ViewModel loading and availability, editor persistence, and Android action delegation through repository fakes.
 
-A Compose instrumentation test covers launcher interaction and the installed-app long-press context menu. CI compiles the instrumentation APK; run it on a connected device or emulator with:
+A Compose instrumentation test covers launcher interaction and the installed-app long-press action dialog. CI compiles the instrumentation APK; run it on a connected device or emulator with:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
