@@ -2,21 +2,23 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.SETTINGS" />
+        </intent>
         <package android:name="com.android.settings" />
-        <package android:name="com.motorola.camera3" />
-        <package android:name="com.google.android.apps.maps" />
-        <package android:name="com.google.android.deskclock" />
-        <package android:name="com.android.chrome" />
-        <package android:name="com.atakmap.app.civ" />
     </queries>
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@drawable/ic_launcher"
         android:supportsRtl="true"
-        android:theme="@style/Theme.QuickLauncher">
+        android:theme="@style/Theme.GridLauncher">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,216 +1,150 @@
-# QuickLauncher
+# GridLauncher
 
-QuickLauncher é um launcher Android nativo, minimalista e pensado para dispositivos
-usados horizontalmente. O MVP mostra uma faixa de atalhos em tela cheia e abre o
-aplicativo correspondente ao toque.
+GridLauncher is a native, minimalist Android home-screen launcher optimized for landscape devices. It provides a focused full-screen shortcut grid, lets users customize which installed apps are shown, and persists that configuration on the device.
 
-## Tecnologias
+The Android namespace and application ID are both `com.valmo.gridlauncher`.
+
+## Stack
 
 - Kotlin
-- Jetpack Compose
+- Jetpack Compose + Material 3
+- Android SDK 36 (`minSdk 28`, `targetSdk 36`)
+- AndroidX Lifecycle 2.10
+- Preferences DataStore
+- `LauncherApps`
 - Gradle Kotlin DSL
-- Android SDK 35 (`minSdk 28`)
-- AndroidX `WindowCompat` e `WindowInsetsControllerCompat`
+- JDK 17
 
-O projeto tem apenas o módulo `app`, não usa banco de dados, injeção de dependência
-ou permissões especiais.
+The project intentionally remains a single `app` module at its current size.
 
-## Requisitos
-
-- Android Studio com JDK 17 configurado como Gradle JDK
-- Android SDK Platform 35 e Build Tools 37.0.0
-- Dispositivo Android 9 ou superior
-- ADB para instalação e diagnóstico em dispositivo físico
-
-No Arch Linux desta máquina, o JDK recomendado está em
-`/usr/lib/jvm/java-17-openjdk` e o SDK em `/opt/android-sdk`. `local.properties`
-é uma configuração local e não deve ser versionado.
-
-## Estrutura
+## Architecture
 
 ```text
-app/src/main/java/com/valmo/quicklauncher/
-├── MainActivity.kt
-├── data/
-│   └── DefaultShortcuts.kt
-├── launcher/
-│   ├── AppLauncher.kt
-│   ├── LauncherScreen.kt
-│   └── LauncherViewModel.kt
-├── model/
-│   └── AppShortcut.kt
-└── ui/theme/
-    ├── Color.kt
-    ├── Theme.kt
-    └── Type.kt
+MainActivity
+    │
+    ▼
+LauncherViewModel
+    │
+    ▼
+LauncherRepository
+    │
+    ├── DataStore
+    └── AppLauncher
+            │
+            └── LauncherApps / Android
 ```
 
-- `DefaultShortcuts` é o único lugar que contém a configuração inicial dos apps.
-- `AppLauncher` conversa com o Android para localizar ícones e abrir atividades.
-- `LauncherViewModel` prepara o estado exibido pela tela.
-- `LauncherScreen` contém somente a interface e funciona com dados falsos no Preview.
+- `LauncherScreen` owns Compose UI and receives state plus callbacks.
+- `LauncherViewModel` coordinates screen state behind a testable `LauncherRepository` interface.
+- `AndroidLauncherRepository` owns persistence and Android app discovery.
+- `AppLauncher` encapsulates listing, launching, app-info, and uninstall intents.
+- `DefaultShortcuts` contains only the initial configuration.
+- App icons are loaded by the UI layer rather than stored in the ViewModel.
 
-## Como um launcher Android funciona
+Refreshes are cancelled before a new one begins. Existing shortcuts stay visible during refreshes, and the initial loading state is explicit so the launcher does not briefly display a false “no shortcuts configured” state while DataStore is still loading.
 
-Uma atividade que declara as categorias `HOME` e `DEFAULT` para a ação `MAIN`
-pode ser escolhida pelo Android como tela inicial. Depois da instalação, o sistema
-pode mostrar um seletor ao pressionar Home. Selecionar QuickLauncher como padrão
-faz com que essa atividade seja aberta no lugar do launcher anterior.
+## Shortcut customization
 
-O manifesto declara visibilidade somente para os seis pacotes consultados pelo MVP.
-Não é utilizada a permissão ampla `QUERY_ALL_PACKAGES`.
+Long-press a launcher shortcut, or tap **Edit**, to open the shortcut customizer.
 
-## Compilar e testar
+On landscape devices the editor uses a split layout:
 
-Confirme primeiro o JDK:
+- **Shortcuts** on the left shows the currently selected shortcut order.
+- **Installed apps** on the right keeps the installed-app grid visible at the same time.
+
+Tap an installed app to add or remove it from the shortcut selection. Long-press an installed app to open a context menu with:
+
+- Open
+- Add to / remove from shortcuts
+- App info
+- Uninstall app
+
+App info and uninstall actions are delegated to the appropriate Android system UI. Saving is disabled when no shortcut is selected, and an empty legacy preference falls back to the default shortcut set instead of flashing an empty launcher.
+
+## Package visibility
+
+The manifest does not request `QUERY_ALL_PACKAGES`. It declares visibility for `MAIN` + `LAUNCHER` activities, matching the launcher use case, plus Android Settings where needed.
+
+## Build and test
+
+Requirements:
+
+- JDK 17
+- Android SDK Platform 36
+- Android SDK Build Tools 36.0.0
+
+Run the same verification used by CI:
 
 ```bash
-export JAVA_HOME=/usr/lib/jvm/java-17-openjdk
-./gradlew assembleDebug
-./gradlew test
-./gradlew lint
+./gradlew testDebugUnitTest lintDebug assembleDebug assembleDebugAndroidTest assembleRelease
 ```
 
-O APK debug é gerado em:
+Installable debug APK:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## Instalar e abrir
+The release build enables R8 and resource shrinking. Without a production signing configuration, the local release APK remains unsigned.
 
-```bash
-adb devices
-./gradlew installDebug
-adb shell am start -n com.valmo.quicklauncher/.MainActivity
+## CI/CD
+
+`.github/workflows/android.yml` runs for every pull request, pushes to `main`, and manual workflow dispatches. It runs unit tests, Android Lint, compiles the Compose instrumentation tests, and builds debug and release APKs.
+
+Each run uploads APKs and the HTML lint report as GitHub Actions artifacts for 14 days.
+
+For same-repository pull requests, CI also publishes the installable debug APK as a GitHub **pre-release asset** using the stable tag:
+
+```text
+pr-<PR number>-preview
 ```
 
-Para simular o botão Home:
+For example, PR #1 publishes `GridLauncher-pr-1.apk` on the `pr-1-preview` pre-release. A new successful run replaces the previous preview release so the release URL stays stable for that PR.
+
+## Install and select as launcher
 
 ```bash
+./gradlew installDebug
 adb shell input keyevent KEYCODE_HOME
 ```
 
-## Selecionar o launcher padrão
-
-1. Instale e abra o QuickLauncher.
-2. Pressione o botão Home.
-3. Escolha **QuickLauncher**.
-4. Se desejar, escolha **Sempre**.
-
-Também é possível abrir a tela de configuração de aplicativo residencial:
+You can also open Android's Home app settings directly:
 
 ```bash
 adb shell am start -a android.settings.HOME_SETTINGS
 ```
 
-Os nomes dos menus podem variar entre fabricantes. Em geral, a opção fica em
-**Configurações > Apps > Apps padrão > App de início**.
+Then choose **GridLauncher** as the default Home app.
 
-## Retornar ao launcher anterior
+## Tests
 
-Abra a configuração de aplicativo residencial e selecione novamente o launcher
-do fabricante:
+Unit tests cover default shortcut integrity, ViewModel loading and availability, editor persistence, and Android action delegation through repository fakes.
 
-```bash
-adb shell am start -a android.settings.HOME_SETTINGS
-```
-
-Se o QuickLauncher estiver aberto, o atalho **CONFIGURAÇÕES** também dá acesso às
-configurações do Android. Desinstalar o QuickLauncher remove-o das opções de Home:
+A Compose instrumentation test covers launcher interaction and the installed-app long-press context menu. CI compiles the instrumentation APK; run it on a connected device or emulator with:
 
 ```bash
-adb uninstall com.valmo.quicklauncher
+./gradlew connectedDebugAndroidTest
 ```
 
-## Descobrir package names
+## Security and backup
 
-Liste todos os pacotes ou filtre um nome conhecido:
+- No special permissions are requested.
+- `QUERY_ALL_PACKAGES` is not used.
+- Automatic backup is disabled because shortcut configuration depends on apps installed on the specific device.
+- Release builds use R8 (`minify`) and `shrinkResources`.
 
-```bash
-adb shell pm list packages
-adb shell pm list packages | grep -i atak
-adb shell pm list packages | grep -Ei 'camera|clock|chrome|maps'
-```
+## Current limitations
 
-Verifique se um pacote específico está instalado:
-
-```bash
-adb shell pm path com.atakmap.app.civ
-```
-
-Os pacotes de câmera, relógio e navegador podem mudar conforme o fabricante.
-Este MVP está configurado para a câmera Motorola (`com.motorola.camera3`).
-Altere somente a lista em `DefaultShortcuts.kt` e a entrada correspondente em
-`<queries>` quando precisar adaptar o QuickLauncher a outro dispositivo.
-
-## Logs
-
-Todos os erros úteis de resolução, ícone e abertura usam a tag `QuickLauncher`:
-
-```bash
-adb logcat
-adb logcat -s QuickLauncher
-```
-
-Para diagnosticar filtros de visibilidade durante o desenvolvimento:
-
-```bash
-adb shell pm log-visibility --enable com.valmo.quicklauncher
-```
-
-Desative depois do teste, pois esse log adicional tem custo:
-
-```bash
-adb shell pm log-visibility --disable com.valmo.quicklauncher
-```
-
-## Esboço da tela
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│                                                                     │
-│     ATAK       │    CÂMERA     │    MAPAS      │   RELÓGIO          │
-│                │               │               │                    │
-│     [ícone]    │    [ícone]    │    [ícone]    │   [ícone]          │
-│                │               │               │                    │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-## Fluxo principal
-
-```text
-Android inicia ou usuário pressiona Home
-                ↓
-QuickLauncher é apresentado
-                ↓
-Usuário toca em um atalho
-                ↓
-Launcher resolve o Intent
-       ┌────────┴────────┐
-       ↓                 ↓
-App encontrado      App indisponível
-       ↓                 ↓
-Abre o app         Exibe mensagem
-```
-
-## Limitações atuais
-
-- Os atalhos são configurados no código.
-- Pacotes alternativos de fabricantes não são descobertos automaticamente.
-- Não há persistência, reordenação ou edição na interface.
-- O modo imersivo não impede o usuário ou o sistema de revelar as barras.
-- Não há kiosk mode, device owner, widgets ou notificações.
+- GridLauncher operates on the current Android user/profile.
+- Manual drag-and-drop shortcut reordering is not implemented yet; newly selected apps are appended to the current selection order.
+- Immersive mode cannot prevent Android from temporarily revealing system bars.
+- Kiosk/device-owner mode, widgets, notifications, and independent shortcut profiles are not implemented yet.
 
 ## Roadmap
 
-1. Tela de edição de atalhos.
-2. Seleção de aplicativos instalados.
-3. Persistência com DataStore.
-4. Quantidade configurável de colunas.
-5. Reordenação dos atalhos.
-6. Toque longo para configuração.
-7. Botão protegido para sair ou abrir configurações.
-8. Modo kiosk/device owner opcional.
-9. Inicialização e recuperação após reinício.
-10. Perfis diferentes de atalhos.
+1. Drag-and-drop shortcut reordering.
+2. Configurable grid sizing.
+3. Additional contextual shortcut actions.
+4. Protected exit/settings controls.
+5. Optional kiosk/device-owner mode.
+6. Multiple shortcut profiles.

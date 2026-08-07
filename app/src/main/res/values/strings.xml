@@ -1,4 +1,31 @@
 <resources>
-    <string name="app_name">QuickLauncher</string>
-</resources>
+    <string name="app_name">GridLauncher</string>
+    <string name="loading_apps">Carregando aplicativos…</string>
+    <string name="no_shortcuts_configured">Nenhum atalho configurado</string>
+    <string name="edit_shortcuts">Editar</string>
+    <string name="choose_apps">Personalizar atalhos</string>
+    <string name="selected_app_count">%1$d selecionados</string>
+    <string name="cancel">Cancelar</string>
+    <string name="save">Salvar</string>
+    <string name="remove">Remover</string>
+    <string name="not_installed">Não instalado</string>
+    <string name="shortcuts_title">Atalhos</string>
+    <string name="installed_apps_title">Aplicativos instalados</string>
+    <string name="long_press_app_actions">Pressione e segure um app para ver ações</string>
+    <string name="no_installed_apps">Nenhum aplicativo inicializável encontrado</string>
+    <string name="open_app">Abrir</string>
+    <string name="add_shortcut">Adicionar aos atalhos</string>
+    <string name="remove_shortcut">Remover dos atalhos</string>
+    <string name="app_info">Informações do App</string>
+    <string name="uninstall_app">Desinstalar o app</string>
+    <string name="app_unavailable">%1$s não está instalado ou não pode ser aberto.</string>
+    <string name="app_launch_failed">Não foi possível abrir %1$s.</string>
+    <string name="app_action_failed">Não foi possível concluir a ação para %1$s.</string>
 
+    <string name="default_settings">CONFIGURAÇÕES</string>
+    <string name="default_camera">CÂMERA</string>
+    <string name="default_maps">MAPAS</string>
+    <string name="default_clock">RELÓGIO</string>
+    <string name="default_browser">NAVEGADOR</string>
+    <string name="default_atak">ATAK</string>
+</resources>
