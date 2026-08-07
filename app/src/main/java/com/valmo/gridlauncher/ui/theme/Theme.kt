@@ -1,11 +1,11 @@
-package com.valmo.quicklauncher.ui.theme
+package com.valmo.gridlauncher.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-private val QuickLauncherColors = darkColorScheme(
+private val GridLauncherColors = darkColorScheme(
     primary = Color.White,
     onPrimary = Color.Black,
     background = Color.Black,
@@ -15,11 +15,10 @@ private val QuickLauncherColors = darkColorScheme(
 )
 
 @Composable
-fun QuickLauncherTheme(content: @Composable () -> Unit) {
+fun GridLauncherTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = QuickLauncherColors,
-        typography = QuickLauncherTypography,
+        colorScheme = GridLauncherColors,
+        typography = GridLauncherTypography,
         content = content,
     )
 }
-

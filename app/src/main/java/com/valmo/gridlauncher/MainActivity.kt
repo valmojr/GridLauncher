@@ -1,4 +1,4 @@
-package com.valmo.quicklauncher
+package com.valmo.gridlauncher
 
 import android.os.Bundle
 import android.widget.Toast
@@ -7,41 +7,68 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.valmo.quicklauncher.launcher.LaunchResult
-import com.valmo.quicklauncher.launcher.LauncherScreen
-import com.valmo.quicklauncher.launcher.LauncherViewModel
-import com.valmo.quicklauncher.ui.theme.QuickLauncherTheme
+import com.valmo.gridlauncher.data.AndroidLauncherRepository
+import com.valmo.gridlauncher.launcher.LaunchResult
+import com.valmo.gridlauncher.launcher.LauncherScreen
+import com.valmo.gridlauncher.launcher.LauncherViewModel
+import com.valmo.gridlauncher.ui.theme.GridLauncherTheme
 
 class MainActivity : ComponentActivity() {
-    private val launcherViewModel: LauncherViewModel by viewModels()
+    private val repository by lazy { AndroidLauncherRepository(application) }
+    private val launcherViewModel: LauncherViewModel by viewModels {
+        LauncherViewModel.factory(repository)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         configureFullScreen()
 
         setContent {
-            val shortcuts by launcherViewModel.shortcuts.collectAsStateWithLifecycle()
+            val uiState by launcherViewModel.uiState.collectAsStateWithLifecycle()
             val context = LocalContext.current
+            val resources = LocalResources.current
 
-            QuickLauncherTheme {
+            GridLauncherTheme {
                 LauncherScreen(
-                    shortcuts = shortcuts,
+                    uiState = uiState,
                     onShortcutClick = { shortcut ->
                         when (val result = launcherViewModel.launch(shortcut)) {
                             LaunchResult.Success -> Unit
                             is LaunchResult.Unavailable -> Toast.makeText(
                                 context,
-                                "${result.label} não está instalado ou não pode ser aberto.",
+                                resources.getString(R.string.app_unavailable, result.label),
                                 Toast.LENGTH_SHORT,
                             ).show()
-
                             is LaunchResult.Failed -> Toast.makeText(
                                 context,
-                                "Não foi possível abrir ${result.label}.",
+                                resources.getString(R.string.app_launch_failed, result.label),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
+                    onEditClick = launcherViewModel::openEditor,
+                    onToggleApp = launcherViewModel::toggleApp,
+                    onSaveEdit = launcherViewModel::saveEditor,
+                    onCancelEdit = launcherViewModel::cancelEditor,
+                    onOpenAppInfo = { app ->
+                        if (!launcherViewModel.openAppInfo(app)) {
+                            Toast.makeText(
+                                context,
+                                resources.getString(R.string.app_action_failed, app.label),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
+                    onUninstallApp = { app ->
+                        if (!launcherViewModel.requestUninstall(app)) {
+                            Toast.makeText(
+                                context,
+                                resources.getString(R.string.app_action_failed, app.label),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }
@@ -77,4 +104,3 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
