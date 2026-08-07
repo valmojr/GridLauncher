@@ -1,8 +1,7 @@
-package com.valmo.quicklauncher.model
+package com.valmo.gridlauncher.model
 
 data class AppShortcut(
-    val label: String,
     val packageName: String,
+    val label: String,
     val launchAction: String? = null,
 )
-

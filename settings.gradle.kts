@@ -14,6 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "QuickLauncher"
+rootProject.name = "GridLauncher"
 include(":app")
-
